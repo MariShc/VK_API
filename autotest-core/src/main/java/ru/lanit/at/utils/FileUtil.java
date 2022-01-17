@@ -72,7 +72,7 @@ public class FileUtil {
      * @param packages -   директории, в которых лежит файл
      * @return -   содержимый текст файла
      */
-    private static String readBodyFromFile(String fileName, String... packages) {
+    public static String readBodyFromFile(String fileName, String... packages) {
         File file = searchFileInDirectory(getParentPath(packages).toString(), fileName);
         try {
             return new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));

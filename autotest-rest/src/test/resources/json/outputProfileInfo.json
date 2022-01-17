@@ -1,0 +1,32 @@
+{
+    "response": {
+        "id": 38575187,
+        "home_town": "Саратов",
+        "status": "🪐✨",
+        "first_name": "Мария",
+        "last_name": "Щепеткова",
+        "bdate": "12.7.1995",
+        "bdate_visibility": 2,
+        "maiden_name": "Andrianova",
+        "phone": "+7 *** *** ** 18",
+        "relation": 4,
+        "relation_partner": {
+            "id": 83440392,
+            "first_name": "Максим",
+            "last_name": "Щепетков",
+            "can_access_closed": true,
+            "is_closed": false
+        },
+        "relation_requests": [
+            {
+                "id": 83440392,
+                "first_name": "Максим",
+                "last_name": "Щепетков",
+                "can_access_closed": true,
+                "is_closed": false
+            }
+        ],
+        "screen_name": "marii_shch",
+        "sex": 1
+    }
+}

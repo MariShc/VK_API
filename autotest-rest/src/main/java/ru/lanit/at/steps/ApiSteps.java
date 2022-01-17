@@ -14,8 +14,13 @@ import ru.lanit.at.utils.DataGenerator;
 import ru.lanit.at.utils.Sleep;
 import ru.lanit.at.utils.VariableUtil;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 import static ru.lanit.at.api.testcontext.ContextHolder.replaceVarsIfPresent;
 import static ru.lanit.at.utils.JsonUtil.getFieldFromJson;
@@ -28,6 +33,7 @@ public class ApiSteps {
     @И("создать запрос")
     public void createRequest(RequestModel requestModel) {
         apiRequest = new ApiRequest(requestModel);
+        System.out.println("requestModel = " + requestModel);
     }
 
     @И("добавить header")
@@ -35,6 +41,14 @@ public class ApiSteps {
         Map<String, String> headers = new HashMap<>();
         dataTable.asLists().forEach(it -> headers.put(it.get(0), it.get(1)));
         apiRequest.setHeaders(headers);
+    }
+
+    @И("добавить параметры token и version")
+    public void addTokenAndVersion() {
+        Map<String, String> query = new HashMap<>();
+        query.put("access_token", apiRequest.getVkAccessToken());
+        query.put("v", apiRequest.getVkVersion());
+        apiRequest.setQuery(query);
     }
 
     @И("добавить query параметры")
@@ -49,6 +63,19 @@ public class ApiSteps {
         apiRequest.sendRequest();
     }
 
+    @И("получение ответа и запись тела ответа в файл")
+    public void writeResponseToFile() {
+        try {
+            File filePath = new File("src/test/resources/json/outputProfileInfo.json");
+            FileWriter file = new FileWriter(filePath);
+            file.write(apiRequest.getResponse().body().prettyPrint());
+            file.flush();
+            file.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @И("статус код {int}")
     public void expectStatusCode(int code) {
         int actualStatusCode = apiRequest.getResponse().statusCode();
@@ -57,7 +84,11 @@ public class ApiSteps {
 
     @И("извлечь данные")
     public void extractVariables(Map<String, String> vars) {
-        String responseBody = apiRequest.getResponse().body().asPrettyString();
+        String responseBody;
+        if (apiRequest.getResponse().getHeaders().hasHeaderWithName("html"))
+            responseBody = apiRequest.getResponse().htmlPath().prettyPrint();
+        else
+            responseBody = apiRequest.getResponse().body().asPrettyString();
         vars.forEach((k, jsonPath) -> {
             jsonPath = replaceVarsIfPresent(jsonPath);
             String extractedValue = VariableUtil.extractBrackets(getFieldFromJson(responseBody, jsonPath));

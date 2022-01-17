@@ -1,12 +1,16 @@
 package ru.lanit.at.api;
 
 import io.qameta.allure.Allure;
+import io.restassured.builder.MultiPartSpecBuilder;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.Method;
 import io.restassured.response.Response;
+import io.restassured.specification.MultiPartSpecification;
 import io.restassured.specification.RequestSpecification;
 import org.aeonbits.owner.ConfigFactory;
 import org.apache.commons.io.IOUtils;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.core5.http.ContentType;
 import ru.lanit.at.api.listeners.RestAssuredCustomLogger;
 import ru.lanit.at.api.models.RequestModel;
 import ru.lanit.at.api.properties.RestConfigurations;
@@ -14,9 +18,14 @@ import ru.lanit.at.utils.FileUtil;
 import ru.lanit.at.utils.JsonUtil;
 import ru.lanit.at.utils.RegexUtil;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Properties;
 
 import static io.restassured.RestAssured.given;
 import static ru.lanit.at.api.testcontext.ContextHolder.replaceVarsIfPresent;
@@ -26,6 +35,9 @@ public class ApiRequest {
     private final static RestConfigurations CONFIGURATIONS = ConfigFactory.create(RestConfigurations.class,
             System.getProperties(),
             System.getenv());
+    Properties property = new Properties();
+    FileInputStream fis;
+
 
     private String baseUrl;
     private String path;
@@ -33,6 +45,8 @@ public class ApiRequest {
     private String body;
     private String fullUrl;
     private Response response;
+    private String vkAccessToken;
+    private String vkVersion;
 
     private RequestSpecBuilder builder;
 
@@ -44,6 +58,8 @@ public class ApiRequest {
         this.method = Method.valueOf(requestModel.getMethod());
         this.body = requestModel.getBody();
         this.fullUrl = replaceVarsIfPresent(requestModel.getUrl());
+        this.vkAccessToken = CONFIGURATIONS.getVkAccessToken();
+        this.vkVersion = CONFIGURATIONS.getVkVersion();
 
         URI uri;
 
@@ -57,6 +73,14 @@ public class ApiRequest {
         this.builder.setBaseUri(uri);
         setBodyFromFile();
         addLoggingListener();
+    }
+
+    public String getVkAccessToken() {
+        return vkAccessToken;
+    }
+
+    public String getVkVersion() {
+        return vkVersion;
     }
 
     public Response getResponse() {
@@ -99,9 +123,13 @@ public class ApiRequest {
      * Сессит тело запроса из файла
      */
     private void setBodyFromFile() {
-        if (body != null && RegexUtil.getMatch(body, ".*\\.json")) {
-            body = replaceVarsIfPresent(FileUtil.readBodyFromJsonDir(body));
-            builder.setBody(body);
+        if (body != null && RegexUtil.getMatch(body, ".*\\.jpg")) {
+            String filesPackage = "src/test/resources/files/";
+            File file = new File(filesPackage + body);
+            //body = replaceVarsIfPresent(FileUtil.readBodyFromFile(body, filesPackage));
+            builder.addMultiPart(new MultiPartSpecBuilder(file).
+                    fileName(body).controlName("photo").
+                    mimeType("image/jpg").build());
         }
     }
 

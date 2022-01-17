@@ -6,7 +6,7 @@ import org.testng.annotations.DataProvider;
         plugin = {"pretty", "io.qameta.allure.cucumber6jvm.AllureCucumber6Jvm"},
         features = "classpath:features",
         glue = {"ru.lanit.at.steps"},
-        tags = "@test"
+        tags = "@test2"
 )
 public class Runner extends AbstractTestNGCucumberTests {
 

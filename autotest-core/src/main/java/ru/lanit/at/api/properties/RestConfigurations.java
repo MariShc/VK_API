@@ -14,4 +14,11 @@ public interface RestConfigurations extends Config {
     @DefaultValue("")
     String getBaseUrl();
 
+    @Key("vkAccessToken")
+    @DefaultValue("")
+    String getVkAccessToken();
+
+    @Key("vkVersion")
+    @DefaultValue("")
+    String getVkVersion();
 }
