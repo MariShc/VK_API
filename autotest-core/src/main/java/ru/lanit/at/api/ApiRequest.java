@@ -14,6 +14,7 @@ import org.apache.hc.core5.http.ContentType;
 import ru.lanit.at.api.listeners.RestAssuredCustomLogger;
 import ru.lanit.at.api.models.RequestModel;
 import ru.lanit.at.api.properties.RestConfigurations;
+import ru.lanit.at.api.testcontext.ContextHolder;
 import ru.lanit.at.utils.FileUtil;
 import ru.lanit.at.utils.JsonUtil;
 import ru.lanit.at.utils.RegexUtil;
@@ -35,8 +36,6 @@ public class ApiRequest {
     private final static RestConfigurations CONFIGURATIONS = ConfigFactory.create(RestConfigurations.class,
             System.getProperties(),
             System.getenv());
-    Properties property = new Properties();
-    FileInputStream fis;
 
 
     private String baseUrl;
@@ -72,15 +71,9 @@ public class ApiRequest {
 
         this.builder.setBaseUri(uri);
         setBodyFromFile();
+        builder.addQueryParam("access_token", vkAccessToken);
+        builder.addQueryParam("v", vkVersion);
         addLoggingListener();
-    }
-
-    public String getVkAccessToken() {
-        return vkAccessToken;
-    }
-
-    public String getVkVersion() {
-        return vkVersion;
     }
 
     public Response getResponse() {
@@ -123,10 +116,13 @@ public class ApiRequest {
      * Сессит тело запроса из файла
      */
     private void setBodyFromFile() {
+        if (body != null && RegexUtil.getMatch(body, ".*\\.json")) {
+            body = replaceVarsIfPresent(FileUtil.readBodyFromJsonDir(body));
+            builder.setBody(body);
+        }
         if (body != null && RegexUtil.getMatch(body, ".*\\.jpg")) {
             String filesPackage = "src/test/resources/files/";
             File file = new File(filesPackage + body);
-            //body = replaceVarsIfPresent(FileUtil.readBodyFromFile(body, filesPackage));
             builder.addMultiPart(new MultiPartSpecBuilder(file).
                     fileName(body).controlName("photo").
                     mimeType("image/jpg").build());

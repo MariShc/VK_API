@@ -1,5 +1,6 @@
 package ru.lanit.at.steps;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.datatable.DataTable;
 import io.cucumber.java.ru.И;
 import io.qameta.allure.Allure;
@@ -15,12 +16,10 @@ import ru.lanit.at.utils.Sleep;
 import ru.lanit.at.utils.VariableUtil;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 import static ru.lanit.at.api.testcontext.ContextHolder.replaceVarsIfPresent;
 import static ru.lanit.at.utils.JsonUtil.getFieldFromJson;
@@ -29,6 +28,7 @@ public class ApiSteps {
 
     private static final Logger LOG = LoggerFactory.getLogger(ApiSteps.class);
     private ApiRequest apiRequest;
+    private final Map<String, String> queryParams = new HashMap<>();
 
     @И("создать запрос")
     public void createRequest(RequestModel requestModel) {
@@ -43,19 +43,21 @@ public class ApiSteps {
         apiRequest.setHeaders(headers);
     }
 
-    @И("добавить параметры token и version")
-    public void addTokenAndVersion() {
-        Map<String, String> query = new HashMap<>();
-        query.put("access_token", apiRequest.getVkAccessToken());
-        query.put("v", apiRequest.getVkVersion());
-        apiRequest.setQuery(query);
-    }
-
     @И("добавить query параметры")
     public void addQuery(DataTable dataTable) {
         Map<String, String> query = new HashMap<>();
-        dataTable.asLists().forEach(it -> query.put(it.get(0), it.get(1)));
+        dataTable.asLists().forEach(it -> {
+            if (it.get(1).startsWith("$"))
+                query.put(it.get(0), replaceVarsIfPresent(it.get(1)));
+            else
+                query.put(it.get(0), it.get(1));
+        });
         apiRequest.setQuery(query);
+    }
+
+    @И("добавить параметры для upload_url")
+    public void addQueryUpload() {
+        apiRequest.setQuery(queryParams);
     }
 
     @И("отправить запрос")
@@ -82,13 +84,17 @@ public class ApiSteps {
         Assert.assertEquals(actualStatusCode, code);
     }
 
+    ObjectMapper mapper = new ObjectMapper();
+
     @И("извлечь данные")
     public void extractVariables(Map<String, String> vars) {
         String responseBody;
-        if (apiRequest.getResponse().getHeaders().hasHeaderWithName("html"))
-            responseBody = apiRequest.getResponse().htmlPath().prettyPrint();
-        else
+        if (apiRequest.getResponse().contentType().contains("html")) {
+            responseBody = String.valueOf(apiRequest.getResponse().body().htmlPath().get().children());
+//            responseBody = responseBody.replace("\\", "");
+        } else {
             responseBody = apiRequest.getResponse().body().asPrettyString();
+        }
         vars.forEach((k, jsonPath) -> {
             jsonPath = replaceVarsIfPresent(jsonPath);
             String extractedValue = VariableUtil.extractBrackets(getFieldFromJson(responseBody, jsonPath));
@@ -96,6 +102,14 @@ public class ApiSteps {
             Allure.addAttachment(k, "application/json", extractedValue, ".txt");
             LOG.info("Извлечены данные: {}={}", k, extractedValue);
         });
+        if (queryParams.isEmpty() && responseBody.contains("upload_url")) {
+            String body = responseBody.split("\\?")[1];
+            String[] params = body.split("&");
+
+            for (String item : params) {
+                queryParams.put(item.split("=")[0], item.split("=")[1]);
+            }
+        }
     }
 
     @И("сгенерировать переменные")
